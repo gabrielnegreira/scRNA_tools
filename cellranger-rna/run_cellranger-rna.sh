@@ -3,16 +3,15 @@
 #SBATCH --ntasks=1 --cpus-per-task=64 
 #SBATCH --time=50:00:00
 #SBATCH --job-name=cellranger-rna
-***REMOVED***
 
 #this is a simple bash script to run the cellranger-rna in the Vlaams supercomputer.
 
 #parameters
-INPUTS_DIR="/scratch/antwerpen/205/vsc20542/cellranger-rna/input_fastq/"
-OUTPUTS_DIR="/scratch/antwerpen/205/vsc20542/cellranger-rna/cellranger_outputs/ran_with_LdCL_genome/"
-CELLRANGER_DIR="/scratch/antwerpen/205/vsc20542/tools/cellranger-rna/cellranger-8.0.1/"
-TRANSCR_REF="/scratch/antwerpen/grp/aitg/jcdujardin/reference_genomes/L_donovani/LdCL/cellrangerRNA_formatted/LdCL_no_multicopy"
-SAMPLE="105875-001-002"
+INPUTS_DIR="/data/antwerpen/grp/aitg/jcdujardin/Sandfly_10XRNA_20261102/"
+OUTPUTS_DIR="/scratch/antwerpen/205/vsc20542/projects/scRNA_sandflies/cellranger_outputs/"
+CELLRANGER_DIR="/scratch/antwerpen/205/vsc20542/tools/cellranger-rna/cellranger-10.1.0/"
+TRANSCR_REF="/scratch/antwerpen/grp/aitg/jcdujardin/reference_genomes/L_donovani/LdCL/cellrangerRNA_formatted/LdCL_no_multicopy/"
+SAMPLE="107706-001-005"
 CREATE_BAM=true
 
 #attempt to remove output folder for the sample (in case previous run was made)
