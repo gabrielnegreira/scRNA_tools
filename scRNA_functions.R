@@ -211,6 +211,55 @@ FeaturePlot_with_names <- function(seuratObj, features, name_by, reduction = "um
   return(plot_grid(plotlist = plot_list, ncol = plot_width))
 }
 
+flag_outlier_cells <- function(x, qc_vars, out_method = c("quantile_up", "quantile_down", "boxplot"), quantile_threshold = 0.99){
+  
+  #validate inputs
+  out_method <- match.arg(out_method)
+
+  missing_vars <- qc_vars[!qc_vars %in% colnames(x@meta.data)]
+  if(length(missing_vars) != 0){
+    stop(paste0("The following features are not present in the object metadata: ", paste0(missing_vars, collapse = ", ")))
+  }
+  
+  if(!is.numeric(quantile_threshold)){
+    stop("`quantile_threshold` must be numeric.")
+  }
+  
+  #prepare data for outlier flagging
+  out_flags <- x@meta.data %>%
+    rownames_to_column("cell_barcode") %>%
+    select(any_of(qc_vars), cell_barcode) %>%
+    pivot_longer(cols = qc_vars, names_to = "feature") %>%
+    group_by(feature)
+  
+  #flag outliers based on out_method
+  if(out_method == "quantile_up"){
+    out_flags <- mutate(out_flags, is_outlier = value > quantile(value, quantile_threshold))
+  }
+  
+  if(out_method == "quantile_down"){
+    out_flags <- mutate(out_flags, is_outlier = value <= quantile(value, quantile_threshold))
+  }
+  
+  if(out_method == "boxplot"){
+    out_flags <- mutate(out_flags, is_outlier = value %in% boxplot.stats(value)$out)
+  }
+  
+  
+  #pivot it back to wide format
+  out_flags <- out_flags %>%
+    select(-value) %>%
+    pivot_wider(names_from = feature, values_from = is_outlier, names_prefix = "is_outlier_")
+  
+  #append the flags to the metadata
+  x@meta.data <- x@meta.data %>%
+    rownames_to_column("cell_barcode") %>%
+    select(-any_of(setdiff(colnames(out_flags), "cell_barcode"))) %>%
+    left_join(out_flags, by = "cell_barcode")
+  
+  return(x)
+}
+
 
 #FeatLabels
 #This function replace feature labels in seurat plot
