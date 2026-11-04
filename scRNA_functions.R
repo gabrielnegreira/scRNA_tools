@@ -211,12 +211,12 @@ FeaturePlot_with_names <- function(seuratObj, features, name_by, reduction = "um
   return(plot_grid(plotlist = plot_list, ncol = plot_width))
 }
 
-flag_outlier_cells <- function(x, qc_vars, out_method = c("quantile_up", "quantile_down", "boxplot"), quantile_threshold = 0.99){
+flag_outlier_cells <- function(seuratObj, qc_vars, out_method = c("quantile_up", "quantile_down", "boxplot"), quantile_threshold = 0.99){
   
   #validate inputs
   out_method <- match.arg(out_method)
 
-  missing_vars <- qc_vars[!qc_vars %in% colnames(x@meta.data)]
+  missing_vars <- qc_vars[!qc_vars %in% colnames(seuratObj@meta.data)]
   if(length(missing_vars) != 0){
     stop(paste0("The following features are not present in the object metadata: ", paste0(missing_vars, collapse = ", ")))
   }
@@ -226,7 +226,7 @@ flag_outlier_cells <- function(x, qc_vars, out_method = c("quantile_up", "quanti
   }
   
   #prepare data for outlier flagging
-  out_flags <- x@meta.data %>%
+  out_flags <- seuratObj@meta.data %>%
     rownames_to_column("cell_barcode") %>%
     select(any_of(qc_vars), cell_barcode) %>%
     pivot_longer(cols = qc_vars, names_to = "feature") %>%
@@ -252,12 +252,12 @@ flag_outlier_cells <- function(x, qc_vars, out_method = c("quantile_up", "quanti
     pivot_wider(names_from = feature, values_from = is_outlier, names_prefix = "is_outlier_")
   
   #append the flags to the metadata
-  x@meta.data <- x@meta.data %>%
+  seuratObj@meta.data <- seuratObj@meta.data %>%
     rownames_to_column("cell_barcode") %>%
     select(-any_of(setdiff(colnames(out_flags), "cell_barcode"))) %>%
     left_join(out_flags, by = "cell_barcode")
   
-  return(x)
+  return(seuratObj)
 }
 
 
