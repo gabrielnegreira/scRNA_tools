@@ -255,7 +255,8 @@ flag_outlier_cells <- function(seuratObj, qc_vars, out_method = c("quantile_up",
   seuratObj@meta.data <- seuratObj@meta.data %>%
     rownames_to_column("cell_barcode") %>%
     select(-any_of(setdiff(colnames(out_flags), "cell_barcode"))) %>%
-    left_join(out_flags, by = "cell_barcode")
+    left_join(out_flags, by = "cell_barcode") %>%
+    column_to_rownames("cell_barcode")
   
   return(seuratObj)
 }
