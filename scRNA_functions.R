@@ -53,8 +53,6 @@ required_packages <- c("BiocManager", "ggplot2", "dplyr", "cowplot", "Seurat",
                        "tradeSeq", "ComplexHeatmap", "circlize", "irlba", 
                        "purrr", "tidyr", "tibble", "rlang", "ggrastr")
 
-missing_packages <- required_packages[!required_packages %in% installed.packages()[, "Package"]]
-install_missing_packages(missing_packages)
 #load the required packages
 invisible(sapply(required_packages, library, character.only = TRUE))
 
@@ -275,13 +273,13 @@ RunPHATE <- function(seuratObj, dims = NULL, features = NULL, layer = "counts", 
 
 ##scran normalize####
 scran_normalize <- function(x){
-  required_packages <- c("Seurat", "SingleCellExperiment", "scran")
+  required_packages <- c("Seurat", "SingleCellExperiment", "scran", "scuttle")
   check_required_packages(required_packages)
   
     data <- x %>%
-    as.SingleCellExperiment()%>%
-    computePooledFactors()%>%
-    logNormCounts() %>%
+    Seurat::as.SingleCellExperiment() %>%
+    scran::computePooledFactors()%>%
+    scuttle::logNormCounts() %>%
     assay("logcounts")
   
   
