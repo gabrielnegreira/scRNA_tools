@@ -322,18 +322,47 @@ RunPHATE <- function(seuratObj, dims = NULL, features = NULL, layer = "counts", 
 }
 
 ##scran normalize####
-scran_normalize <- function(x){
-  required_packages <- c("Seurat", "SingleCellExperiment", "scran", "scuttle")
+scran_normalize <- function(x, assay = "RNA"){
+  required_packages <- c("SeuratObject", "SingleCellExperiment", "SummarizedExperiment", "scran", "scuttle")
   check_required_packages(required_packages)
   
-    data <- x %>%
-    Seurat::as.SingleCellExperiment() %>%
-    scuttle::computePooledFactors()%>%
-    scuttle::logNormCounts() %>%
-    assay("logcounts")
+  # Restrict to raw-count layers; excludes existing data.*, scale.data, etc.
+  count_layers <- grep(
+    "^counts(\\.|$)",
+    SeuratObject::Layers(x[[assay]]),
+    value = TRUE
+  )
   
+  if(!length(count_layers) > 0){
+   stop("There are no count layers in the object") 
+  }else{
+    message(paste("Found", length(count_layers), "layers in the", assay, "assay. Normalizing each individually..."))
+  }
   
-  x[[DefaultAssay(x)]]$data <- data
+  for (count_layer in count_layers) {
+    counts <- SeuratObject::LayerData(
+      object = x,
+      assay = assay,
+      layer = count_layer
+    )
+  
+    # One SCE per sample/layer
+    sce <- SingleCellExperiment::SingleCellExperiment(
+      assays = list(counts = counts)
+    )
+    
+    sce <- scuttle::computePooledFactors(sce)
+    sce <- scuttle::logNormCounts(sce)
+    
+    # counts.sampleA -> data.sampleA; counts -> data
+    data_layer <- sub("^counts", "data", count_layer)
+    
+    SeuratObject::LayerData(
+      object = x,
+      assay = assay,
+      layer = data_layer
+    ) <- SummarizedExperiment::assay(sce, "logcounts")
+  }
   return(x)
 }
 
