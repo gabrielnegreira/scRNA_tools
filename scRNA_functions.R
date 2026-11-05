@@ -328,7 +328,7 @@ scran_normalize <- function(x){
   
     data <- x %>%
     Seurat::as.SingleCellExperiment() %>%
-    scran::computePooledFactors()%>%
+    scuttle::computePooledFactors()%>%
     scuttle::logNormCounts() %>%
     assay("logcounts")
   
@@ -458,7 +458,7 @@ plot_smoothers <- function(models, counts, genes, lineages = NULL, gene_names = 
 #meta_from_ref
 #this function will project a query seurat object into a reference seurat object to extract metadata from the reference into the query.
 #it allows the use of an `idconversion` named vector to convert gene ids into orthologs for instance. This way reference and query objects generated with different genomes can be used. 
-meta_from_ref <- function(query_obj, ref_obj, normalization_method = c("LogNormalize", "SCT"), dims = 1:20, metadata_to_extract, ignore_values = NULL, id_conversion = NULL, subsample_ref = NULL, prefix = "predicted."){
+meta_from_ref <- function(query_obj, ref_obj, normalization_method = c("LogNormalize", "SCT"), dims = 1:20, metadata_to_extract, ignore_values = NULL, id_conversion = NULL, subsample_ref = NULL, prefix = "predicted.", vars_to_regress = NULL){
   #libraries
   required_packages <- c("Seurat", "dplyr", "purrr", "tidyr", "tibble")
   check_required_packages(required_packages)
@@ -529,17 +529,17 @@ meta_from_ref <- function(query_obj, ref_obj, normalization_method = c("LogNorma
   if(normalization_method == "SCT"){
     #run SCTransform on both objects
     print("Running SCT transformation on both objects...")
-    new_query_obj <- SCTransform(new_query_obj, return.only.var.genes = FALSE, verbose = FALSE)
-    ref_obj <- SCTransform(ref_obj, return.only.var.genes = FALSE, verbose = FALSE)
+    new_query_obj <- SCTransform(new_query_obj, return.only.var.genes = FALSE, verbose = FALSE, vars.to.regress = vars_to_regress)
+    ref_obj <- SCTransform(ref_obj, return.only.var.genes = FALSE, verbose = FALSE, vars.to.regress = vars_to_regress)
   }else{
     print("Running LogNormalize on both objects")
     new_query_obj <- new_query_obj %>%
       NormalizeData() %>%
-      ScaleData() %>%
+      ScaleData(vars.to.regress = vars_to_regress) %>%
       FindVariableFeatures()
     ref_obj <- ref_obj %>%
       NormalizeData() %>%
-      ScaleData() %>%
+      ScaleData(vars.to.regress = vars_to_regress) %>%
       FindVariableFeatures()
   }
   print("Running PCA on reference object...")
@@ -842,3 +842,51 @@ RunPCA_plus <- function(seuratObj, assay = NULL, features = NULL, layer = "scale
    
   return(seuratObj)
 }
+
+VariableFeaturePlot_SCT <- function(seuratObj, assay = "SCT", nFeat_label = 20, label_info = "feature_id", label_trim = 30){
+  
+  #test if assay is present
+  if(!assay %in% names(seuratObj@assays)){
+    stop(paste0("Cannot find assay `", assay, "` in the provided seurat object."))
+  }
+  
+  #prepare data for plotting
+  plot_list <- list()
+  for(i in c(1:length(seuratObj[[assay]]@SCTModel.list))){
+    to_plot <- seuratObj[[assay]]@SCTModel.list[[i]]@feature.attributes %>%
+      as.data.frame() %>%
+      rownames_to_column("feature") %>%
+      left_join(
+        seuratObj[["RNA"]]@meta.data %>% #get metadata from "RNA" assay
+          rownames_to_column("feature") %>%
+          mutate(feature_id = feature) %>%
+          select(feature, any_of(label_info))
+        , by = "feature"
+      ) %>%
+      mutate(is_variable = feature %in% VariableFeatures(seuratObj)) %>%
+      mutate(label = ifelse(feature %in% VariableFeatures(seuratObj)[1:nFeat_label], cellranger_name, NA)) %>% #get labels for top genes
+      mutate(label = ifelse(nchar(label) > label_trim, paste0(strtrim(label, label_trim), "..."), label))
+    
+    color_labels <- to_plot %>%
+      group_by(is_variable) %>%
+      summarise(count = n()) %>%
+      deframe()
+    
+    color_labels["FALSE"] <- paste("Non-variable count:", color_labels["FALSE"])
+    color_labels["TRUE"] <- paste("Variable count:", color_labels["TRUE"])
+    
+    plot_list[[i]] <- ggplot(to_plot, aes(x = gmean, y = residual_variance, color = is_variable))+
+      geom_point(size = 0.8)+
+      geom_text_repel(data = filter(to_plot, !is.na(label)), aes(label = label), show.legend = FALSE, min.segment.length = 0, color = "black")+
+      scale_x_continuous(transform = "log10")+
+      theme_cowplot()+
+      ggtitle(paste0("SCT model for library: ", levels(factor(seuratObj$orig.ident))[i]))+
+      scale_color_manual(values = c("black", "red"), labels = color_labels, name = NULL)+
+      theme(legend.position = "top")
+  }
+  final_plot <- ggalign::align_plots(!!!plot_list)
+  return(final_plot)
+}
+
+
+
