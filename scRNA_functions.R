@@ -917,5 +917,46 @@ VariableFeaturePlot_SCT <- function(seuratObj, assay = "SCT", nFeat_label = 20, 
   return(final_plot)
 }
 
-
-
+#plot_table
+## this function plots a table using the geom_tile, returning a ggplot object that can be alligned with other plots with ggaling
+plot_table <- function(x){
+  #check packages
+  required_packages <- c("dplyr", "tibble", "ggplot2")
+  check_required_packages(required_packages)
+  
+  #check if table is a dataframe
+  if(!is.data.frame(x)){
+    stop("object must be a data frame")
+  }
+  
+  #prepare table header
+  header <- tibble(
+    row = ".header",
+    column = factor(colnames(x), levels = colnames(x)),
+    value = colnames(x),
+    header = TRUE
+  )
+  
+  x <- x %>%
+    rownames_to_column("row") %>%
+    mutate(row = factor(row, levels = rownames(x))) %>%
+    mutate(across(-row, as.character)) %>%
+    pivot_longer(-row, names_to = "column", values_to = "value") %>%
+    mutate(
+      column = factor(column, levels = levels(header$column)),
+      header = FALSE
+    ) %>%
+    bind_rows(header) %>%
+    mutate(
+      row = factor(row, levels = c(rev(unique(row[row != ".header"])), ".header"))
+    ) %>%
+    group_by(column) %>%
+    mutate(col_width = nchar(as.character(column))) %>%
+    mutate(col_width = max(col_width)) %>%
+    ggplot(aes(x = column, y = row, label = value)) +
+    geom_tile(fill = "white", colour = "black") +
+    geom_text(aes(fontface = if_else(header, "bold", "plain")), size = 3) +
+    theme_void()
+  
+  return(x)
+}
