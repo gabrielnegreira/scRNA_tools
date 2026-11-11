@@ -48,7 +48,7 @@ check_required_packages <- function(packages) {
 }
 
 #install and load required packages####
-required_packages <- c("BiocManager", "ggplot2", "dplyr", "cowplot", "Seurat",
+required_packages <- c("BiocManager", "ggplot2", "dplyr", "ggalign", "Seurat",
                        "hues", "phateR", "scran", "SingleCellExperiment", 
                        "tradeSeq", "ComplexHeatmap", "circlize", "irlba", 
                        "purrr", "tidyr", "tibble", "rlang", "ggrastr")
