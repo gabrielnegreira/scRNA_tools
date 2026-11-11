@@ -734,6 +734,7 @@ DoHeatmap_plus <- function(seuratObj,
   #add grouping annotations
     for(group_var in group.by){
       annotation <- setNames(group_data[[group_var]], rownames(group_data)) 
+      annotation <- unfactor(annotation)
       if(length(unique(annotation)) == 1){
         warning(paste0(group_var, " has only 1 value so it was skipped..."))
         group.by <- group.by[-which(group.by == group_var)] 
