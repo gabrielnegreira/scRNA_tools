@@ -136,7 +136,11 @@ create_colors <-function(x,
                         `indigo night` = c(hmin = 260, hmax = 290, cmin = 40, cmax = 100, lmin = 35, lmax = 100),
                         `purple wine` = c(hmin = 290, hmax = 330, cmin = 0, cmax = 100, lmin = 0, lmax = 40))
   
-  x <- sort(unique(x))
+  if(length(x) != length(unique(x))){
+    warning("Input vector contain multiple identical values. Colapsing the vector to unique values only...")
+    x <- unique(x)
+  }
+  
   set.seed(seed.use)
   colors <- hues::iwanthue(n = length(x), 
                      hmin = palette_param[[palette]]["hmin"], 
