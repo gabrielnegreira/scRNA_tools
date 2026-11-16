@@ -319,7 +319,7 @@ RunPHATE <- function(seuratObj, dims = NULL, features = NULL, layer = "counts", 
   
  
   phate_map <- phate(phate_map, ...)
-  seuratObj@reductions$phate <- CreateDimReducObject(embeddings = 100*as.matrix(phate_map),
+  seuratObj@reductions$phate <- CreateDimReducObject(embeddings = 100*base::as.matrix(phate_map),
                                                      assay = assay,
                                                      key = reduction.key)
   return(seuratObj)
@@ -634,7 +634,7 @@ DoHeatmap_plus <- function(seuratObj,
   }
   
   #get the matrix
-  heat_matrix <- as.matrix(GetAssayData(seuratObj, assay = assay, layer = layer))
+  heat_matrix <- base::as.matrix(GetAssayData(seuratObj, assay = assay, layer = layer))
   #test if the features are in the provided matrix
   missing_features <- features[which(!features %in% rownames(heat_matrix))]                         
   if(length(missing_features) != 0){
@@ -685,7 +685,7 @@ DoHeatmap_plus <- function(seuratObj,
     cells_cluster <- group_data %>%
       rownames_to_column("cell") %>%
       group_by(!!!syms(c(group.by))) %>%
-      mutate(order = ifelse(n() > 1, hclust(dist(t(heat_matrix[,cell, drop = FALSE])), method = hclust_method)$order, 1)) %>%
+      mutate(order = ifelse(n() > 1, hclust(stats::dist(t(heat_matrix[,cell, drop = FALSE])), method = hclust_method)$order, 1)) %>%
       arrange(!!!syms(c(group.by, "order"))) %>%
       mutate(new_order = row_number()) %>%
       ungroup()
@@ -739,17 +739,11 @@ DoHeatmap_plus <- function(seuratObj,
 
   #add grouping annotations
     for(group_var in group.by){
-<<<<<<< HEAD
-      annotation <- setNames(group_data[[group_var]], rownames(group_data)) 
-      if(is.factor(annotation)){
-        annotation <- unfactor(annotation)
-=======
       annotation <- group_data[colnames(heat_matrix) , group_var, drop = TRUE]
       #if annotation is a factor, drop empty levels:
       if(is.factor(annotation)){
         annotation_levels <- levels(annotation)[levels(annotation) %in% unique(as.character(annotation))]
         annotation <- factor(annotation, levels = annotation_levels)
->>>>>>> bcf76bd (make `DoHeatmap_plus` keep group order of factors)
       }
       
       if(length(unique(annotation)) == 1){
@@ -863,7 +857,7 @@ RunPCA_plus <- function(seuratObj, assay = NULL, features = NULL, layer = "scale
   }
   
   #get the counts
-  data_matrix <- as.matrix(FetchData(seuratObj, features, assay = assay, layer = layer))
+  data_matrix <- base::as.matrix(FetchData(seuratObj, features, assay = assay, layer = layer))
   #scale it
   if(scale & !grepl("scale", layer)){
     print("scaling the matrix...")
