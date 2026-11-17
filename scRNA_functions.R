@@ -317,7 +317,6 @@ RunPHATE <- function(seuratObj, dims = NULL, features = NULL, layer = "counts", 
     phate_map <- Embeddings(seuratObj, reduction = "pca")[,dims]
   }
   
- 
   phate_map <- phate(phate_map, ...)
   seuratObj@reductions$phate <- CreateDimReducObject(embeddings = 100*base::as.matrix(phate_map),
                                                      assay = assay,
