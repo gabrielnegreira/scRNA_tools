@@ -704,17 +704,54 @@ DoHeatmap_plus <- function(seuratObj,
     col_breaks <- NULL
     cells_annotation <- NULL
   }
-  #replace gene names by labels
-  if(show_feature_labels){
-    if(!is.null(feature_labels)){
-      feature_labels <- ifelse(nchar(feature_labels) > feature_labels_max_char, str_sub(feature_labels, 1, feature_labels_max_char), feature_labels)
-      feature_labels <- ifelse(nchar(feature_labels) == feature_labels_max_char, paste0(feature_labels, "..."), feature_labels)
-    }else{
-      feature_labels <- setNames(rownames(heat_matrix), rownames(heat_matrix))
-    }
-    feature_labels <- scale_y_continuous(name = NULL, breaks = rownames(heat_matrix), labels = feature_labels[rownames(heat_matrix)])
-  }else{
+  
+  #replace gene ids by labels
+  if(!show_feature_labels){
     feature_labels <- scale_y_continuous(name = NULL, breaks = NULL, labels = NULL)
+  }else{
+    if(is.null(feature_labels)){
+      #if no feature labels are provided, create a dummy one with feature ids as names
+      feature_labels <- data.frame(feature_id = rownames(heat_matrix), feature_name = rownames(heat_matrix))
+    }
+    
+    #test if feature_labels is a dataframe with 2 columns only
+    if(!is.data.frame(feature_labels)){
+      stop("Feature labels must be a 2 column data frame, with feature ids as first column and feature names as second column")  
+    }else{
+      if(!ncol(feature_labels) == 2){
+        stop("Feature labels must be a 2 column data frame, with feature ids as first column and feature names as second column")  
+      }
+    }
+    ##standardize the column names
+    colnames(feature_labels) <- c("feature_id", "feature_name")
+    #test if feature_labels contains all needed features
+    missing_features <- rownames(heat_matrix)[!rownames(heat_matrix) %in% feature_labels$feature_id]
+    if(length(missing_features) != 0){
+      stop(paste0("not all features are present in feature_labels: ", paste0(missing_features, collapse = ",")))
+    }
+    
+    #proceed otherwise
+    #trim feature names to avoid too big strings
+    feature_labels <- feature_labels %>%
+      mutate(
+        feature_name = ifelse(
+          nchar(feature_name) > feature_labels_max_char,
+          paste0(strtrim(feature_name, feature_labels_max_char), "..."), 
+          feature_name
+        )
+      ) %>%
+      #make sure feature names are unique
+      group_by(feature_name) %>%
+      mutate(n = n()) %>%
+      mutate(feature_name = ifelse(
+        n > 1,
+        paste0(feature_name, "_dup", row_number()),
+        feature_name
+      ))
+    feature_labels <- feature_labels %>%
+      select(feature_id, feature_name) %>%
+      deframe()
+    feature_labels <- scale_y_continuous(name = NULL, breaks = rownames(heat_matrix), labels = feature_labels[rownames(heat_matrix)])
   }
   
   #prepare geom tiles according to `raster` parameter
